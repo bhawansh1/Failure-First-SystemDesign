@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Product {
+  id    String @id @default(uuid())
+  name  String
+  price Float
+  stock Int
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Float
+  state     String   @default("CREATED") // Maps to OrderState enum
+  lastError String?  // To persist failure reason
+  version   Int      @default(1) // Optimistic locking
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float // Price at time of purchase
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model IdempotencyKey {
+  key        String   @id
+  method     String
+  path       String
+  params     String // JSON string of request body/params
+  response   String? // JSON string of cached response
+  statusCode Int?
+  createdAt  DateTime @default(now())
+  locked     Boolean  @default(false) // To prevent concurrent execution
+}
+
+model OutboxEvent {
+  id        String   @id @default(uuid())
+  type      String
+  payload   String // JSON
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

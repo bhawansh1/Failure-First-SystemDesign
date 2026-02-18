@@ -1,0 +1,29 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+    await prisma.product.deleteMany();
+
+    const products = [
+        { name: 'Laptop', price: 999.99, stock: 100 },
+        { name: 'Headphones', price: 199.99, stock: 50 },
+        { name: 'Mouse', price: 29.99, stock: 200 },
+        { name: 'Keyboard', price: 59.99, stock: 150 },
+    ];
+
+    for (const p of products) {
+        await prisma.product.create({ data: p });
+    }
+
+    console.log('Seeded products');
+}
+
+main()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
