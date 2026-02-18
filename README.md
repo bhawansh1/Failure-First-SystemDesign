@@ -40,6 +40,41 @@ The system includes built-in "Chaos" (Simulators) with configurable failure rate
 
 ---
 
+## 🏗️ Architectural Design
+
+The system follows a decoupled, event-driven architecture designed for high availability and fault tolerance.
+
+```mermaid
+graph TD
+    User((User)) -->|HTTP| FE[React Frontend]
+    FE -->|API Calls + Idempotency Key| GW[API Gateway / Integration Layer]
+    
+    subgraph "Backend Services"
+        GW -->|Persist Order| DB[(SQLite + Prisma)]
+        GW -->|Enqueue Job| Q[BullMQ / Redis]
+    end
+
+    subgraph "Async Processing"
+        Q -->|Pick Up Job| W[Order Worker]
+        W -->|Validate State| SM[Order State Machine]
+        W -->|Payment Charge| PS[Payment Simulator]
+        W -->|Reserve Stock| IS[Inventory Simulator]
+        W -->|Update Status| DB
+    end
+
+    PS -.->|50% Failure| W
+    W -.->|Retry with Exponential Backoff| Q
+```
+
+### The "Gateway" Pattern
+In this project, the Express backend serves as a **Smart Integration Layer** (conceptually an API Gateway). It handles:
+- **Request Orchestration**: Coordinating initial order creation across multiple data models.
+- **Idempotency Enforcement**: Detecting and filtering duplicate requests at the perimeter before they hit downstream services.
+- **Rate Limiting & Validation**: Ensuring only valid, well-formed requests enter the processing pipeline.
+- **Unified Entry Point**: Providing a single, secure interface for the frontend while abstracting the complexity of Redis, SQLite, and internal workers.
+
+---
+
 ## 🏗️ The Tech Stack
 
 | Layer | Technology |
